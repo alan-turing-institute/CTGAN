@@ -8,8 +8,12 @@ __version__ = '0.2.2.dev0'
 
 from ctgan.demo import load_demo
 from ctgan.synthesizer import CTGANSynthesizer
+from ctgan.constants import *
 
 __all__ = (
     'CTGANSynthesizer',
-    'load_demo'
+    'load_demo',
+    'CATEGORICAL',
+    'ORDINAL',
+    'CONTINUOUS'
 )

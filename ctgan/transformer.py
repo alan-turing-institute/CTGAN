@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.mixture import BayesianGaussianMixture
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.utils._testing import ignore_warnings
+# from sklearn.utils._testing import ignore_warnings
+from ctgan.constants import CONTINUOUS, CATEGORICAL, ORDINAL
 
 
 class DataTransformer(object):
@@ -20,11 +21,13 @@ class DataTransformer(object):
             Epsilon value.
     """
 
-    def __init__(self, n_clusters=10, epsilon=0.005):
+    def __init__(self, metadata, n_clusters=10, epsilon=0.005):
         self.n_clusters = n_clusters
         self.epsilon = epsilon
 
-    @ignore_warnings(category=ConvergenceWarning)
+        self.meta = metadata
+
+    # @ignore_warnings(category=ConvergenceWarning)
     def _fit_continuous(self, column, data):
         gm = BayesianGaussianMixture(
             self.n_clusters,
@@ -56,7 +59,37 @@ class DataTransformer(object):
             'output_dimensions': categories
         }
 
-    def fit(self, data, discrete_columns=tuple()):
+    @staticmethod
+    def get_metadata(metadata):
+        meta = []
+
+        for cidx, col in enumerate(metadata['columns']):
+
+            if cidx in metadata['categorical_columns']:
+                meta.append({
+                    "name": cidx,
+                    "type": CATEGORICAL,
+                    "size": col['size'],
+                    "i2s": [i for i, _ in enumerate(col['i2s'])]
+                })
+            elif cidx in metadata['ordinal_columns']:
+                meta.append({
+                    "name": cidx,
+                    "type": ORDINAL,
+                    "size": col['size'],
+                    "i2s": [i for i, _ in enumerate(col['i2s'])]
+                })
+            else:
+                meta.append({
+                    "name": cidx,
+                    "type": CONTINUOUS,
+                    "min": col['min'],
+                    "max": col['max']
+                })
+
+        return meta
+
+    def fit(self, data):
         self.output_info = []
         self.output_dimensions = 0
 
@@ -67,17 +100,22 @@ class DataTransformer(object):
             self.dataframe = True
 
         self.dtypes = data.infer_objects().dtypes
-        self.meta = []
-        for column in data.columns:
-            column_data = data[[column]].values
-            if column in discrete_columns:
-                meta = self._fit_discrete(column, column_data)
-            else:
+        self.fit_meta = []
+
+        for id_, info in enumerate(self.meta['columns']):
+            column = info['name']
+            column_data = data[column].values.reshape(-1, 1)
+
+            if info['type'] == CONTINUOUS:
                 meta = self._fit_continuous(column, column_data)
+
+            else:
+                meta = self._fit_discrete(column, column_data)
 
             self.output_info += meta['output_info']
             self.output_dimensions += meta['output_dimensions']
-            self.meta.append(meta)
+
+            self.fit_meta.append(meta)
 
     def _transform_continuous(self, column_meta, data):
         components = column_meta['components']
@@ -116,7 +154,7 @@ class DataTransformer(object):
             data = pd.DataFrame(data)
 
         values = []
-        for meta in self.meta:
+        for meta in self.fit_meta:
             column_data = data[[meta['name']]].values
             if 'model' in meta:
                 values += self._transform_continuous(meta, column_data)
@@ -156,7 +194,7 @@ class DataTransformer(object):
         start = 0
         output = []
         column_names = []
-        for meta in self.meta:
+        for meta in self.fit_meta:
             dimensions = meta['output_dimensions']
             columns_data = data[:, start:start + dimensions]
 
