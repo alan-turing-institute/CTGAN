@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from os import path
 from torch import optim
 from torch.nn import functional
 
@@ -7,6 +8,13 @@ from ctgan.conditional import ConditionalGenerator
 from ctgan.models import Discriminator, Generator
 from ctgan.sampler import Sampler
 from ctgan.transformer import DataTransformer
+
+import logging
+from logging.config import fileConfig
+dirname = path.dirname(__file__)
+logconfig = path.join(dirname, '../logging_config.ini')
+fileConfig(logconfig)
+logger = logging.getLogger(__name__)
 
 
 class CTGANSynthesizer(object):
@@ -226,9 +234,8 @@ class CTGANSynthesizer(object):
                 loss_g.backward()
                 optimizerG.step()
 
-            print("Epoch %d, Loss G: %.4f, Loss D: %.4f" %
-                  (i + 1, loss_g.detach().cpu(), loss_d.detach().cpu()),
-                  flush=True)
+            logger.debug("Epoch %d, Loss G: %.4f, Loss D: %.4f" %
+                  (i + 1, loss_g.detach().cpu(), loss_d.detach().cpu()))
 
     def sample(self, n):
         """Sample data similar to the training data.
