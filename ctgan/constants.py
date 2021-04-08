@@ -1,3 +1,5 @@
-CATEGORICAL = "categorical"
-CONTINUOUS = "continuous"
-ORDINAL = "ordinal"
+CATEGORICAL = "Categorical"
+ORDINAL = "Ordinal"
+INTEGER = "Integer"
+FLOAT = "Float"
+CONTINUOUS = [INTEGER, FLOAT]

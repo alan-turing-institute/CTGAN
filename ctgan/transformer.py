@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-from sklearn.exceptions import ConvergenceWarning
 from sklearn.mixture import BayesianGaussianMixture
 from sklearn.preprocessing import OneHotEncoder
-# from sklearn.utils._testing import ignore_warnings
-from ctgan.constants import CONTINUOUS, CATEGORICAL, ORDINAL
+
+from ctgan.constants import *
 
 
 class DataTransformer(object):
@@ -106,7 +105,7 @@ class DataTransformer(object):
             column = info['name']
             column_data = data[column].values.reshape(-1, 1)
 
-            if info['type'] == CONTINUOUS:
+            if info['type'] in CONTINUOUS:
                 meta = self._fit_continuous(column, column_data)
 
             else:
