@@ -4,8 +4,6 @@ from sklearn.mixture import BayesianGaussianMixture
 from sklearn.preprocessing import OneHotEncoder
 
 from ctgan.constants import *
-from sklearn.utils._testing import ignore_warnings
-
 
 class DataTransformer(object):
     """Data Transformer.
