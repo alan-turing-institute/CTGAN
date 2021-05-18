@@ -34,7 +34,8 @@ class CTGANSynthesizer(object):
             Number of data samples to process in each step.
     """
 
-    def __init__(self, embedding_dim=128,
+    def __init__(self, metadata,
+                 embedding_dim=128,
                  gen_dim=(256, 256),
                  dis_dim=(256, 256),
                  l2scale=1e-6,
@@ -49,6 +50,9 @@ class CTGANSynthesizer(object):
         self.batch_size = batch_size
         self.epochs = epochs
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.metadata = metadata
+        self.transformer = DataTransformer(metadata)
 
     def _apply_activate(self, data):
         data_t = []
@@ -101,7 +105,7 @@ class CTGANSynthesizer(object):
 
         return (loss * m).sum() / data.size()[0]
 
-    def fit(self, train_data, metadata, log_frequency=True):
+    def fit(self, train_data, log_frequency=True):
         """Fit the CTGAN Synthesizer models to the training data.
 
         Args:
@@ -120,7 +124,6 @@ class CTGANSynthesizer(object):
                 sampling. Defaults to ``True``.
         """
 
-        self.transformer = DataTransformer(metadata)
         self.transformer.fit(train_data)
         train_data = self.transformer.transform(train_data)
 

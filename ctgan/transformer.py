@@ -4,6 +4,7 @@ from sklearn.mixture import BayesianGaussianMixture
 from sklearn.preprocessing import OneHotEncoder
 
 from ctgan.constants import *
+from sklearn.utils._testing import ignore_warnings
 
 
 class DataTransformer(object):
@@ -24,10 +25,15 @@ class DataTransformer(object):
         self.n_clusters = n_clusters
         self.epsilon = epsilon
 
-        self.meta = metadata
+        self.metadata = metadata
+
+        self.output_info = None
+        self.output_dimensions = None
+        self.dtypes = None
+        self.fit_meta = None
 
     # @ignore_warnings(category=ConvergenceWarning)
-    def _fit_continuous(self, column, data):
+    def _fit_continuous(self, col_name, data):
         gm = BayesianGaussianMixture(
             self.n_clusters,
             weight_concentration_prior_type='dirichlet_process',
@@ -39,58 +45,31 @@ class DataTransformer(object):
         num_components = components.sum()
 
         return {
-            'name': column,
+            'name': col_name,
             'model': gm,
             'components': components,
             'output_info': [(1, 'tanh'), (num_components, 'softmax')],
             'output_dimensions': 1 + num_components,
         }
 
-    def _fit_discrete(self, column, data):
+    def _fit_discrete(self, col_name, data):
         ohe = OneHotEncoder(sparse=False)
         ohe.fit(data)
         categories = len(ohe.categories_[0])
 
         return {
-            'name': column,
+            'name': col_name,
             'encoder': ohe,
             'output_info': [(categories, 'softmax')],
             'output_dimensions': categories
         }
 
-    @staticmethod
-    def get_metadata(metadata):
-        meta = []
-
-        for cidx, col in enumerate(metadata['columns']):
-
-            if cidx in metadata['categorical_columns']:
-                meta.append({
-                    "name": cidx,
-                    "type": CATEGORICAL,
-                    "size": col['size'],
-                    "i2s": [i for i, _ in enumerate(col['i2s'])]
-                })
-            elif cidx in metadata['ordinal_columns']:
-                meta.append({
-                    "name": cidx,
-                    "type": ORDINAL,
-                    "size": col['size'],
-                    "i2s": [i for i, _ in enumerate(col['i2s'])]
-                })
-            else:
-                meta.append({
-                    "name": cidx,
-                    "type": CONTINUOUS,
-                    "min": col['min'],
-                    "max": col['max']
-                })
-
-        return meta
-
     def fit(self, data):
         self.output_info = []
         self.output_dimensions = 0
+
+        self.dtypes = {}
+        self.fit_meta = []
 
         if not isinstance(data, pd.DataFrame):
             self.dataframe = False
@@ -98,23 +77,30 @@ class DataTransformer(object):
         else:
             self.dataframe = True
 
-        self.dtypes = data.infer_objects().dtypes
-        self.fit_meta = []
+        for col_info in self.metadata['columns']:
+            col_name = col_info['name']
+            col_type = col_info['type']
+            column_data = data[col_name].values.reshape(-1, 1)
 
-        for id_, info in enumerate(self.meta['columns']):
-            column = info['name']
-            column_data = data[column].values.reshape(-1, 1)
+            if col_type == FLOAT:
+                col_meta = self._fit_continuous(col_name, column_data)
+                self.dtypes[col_name] = np.float
 
-            if info['type'] in CONTINUOUS:
-                meta = self._fit_continuous(column, column_data)
+            elif col_type == INTEGER:
+                col_meta = self._fit_continuous(col_name, column_data)
+                self.dtypes[col_name] = np.int
+
+            elif col_type == CATEGORICAL or col_type == ORDINAL:
+                col_meta = self._fit_discrete(col_name, column_data)
+                self.dtypes[col_name] = np.object
 
             else:
-                meta = self._fit_discrete(column, column_data)
+                raise ValueError(f'Unknown dtype {col_type} for column {col_name}')
 
-            self.output_info += meta['output_info']
-            self.output_dimensions += meta['output_dimensions']
+            self.output_info += col_meta['output_info']
+            self.output_dimensions += col_meta['output_dimensions']
 
-            self.fit_meta.append(meta)
+            self.fit_meta.append(col_meta)
 
     def _transform_continuous(self, column_meta, data):
         components = column_meta['components']
@@ -185,9 +171,12 @@ class DataTransformer(object):
 
         return column
 
-    def _inverse_transform_discrete(self, meta, data):
+    def _inverse_transform_discrete(self, meta, oh_data):
         encoder = meta['encoder']
-        return encoder.inverse_transform(data)
+        data = encoder.inverse_transform(oh_data)
+        print(data[0])
+
+        return data
 
     def inverse_transform(self, data, sigmas):
         start = 0
@@ -201,6 +190,7 @@ class DataTransformer(object):
                 sigma = sigmas[start] if sigmas else None
                 inverted = self._inverse_transform_continuous(meta, columns_data, sigma)
             else:
+                print(meta['name'])
                 inverted = self._inverse_transform_discrete(meta, columns_data)
 
             output.append(inverted)
