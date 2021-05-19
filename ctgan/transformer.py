@@ -191,18 +191,19 @@ class DataTransformer(object):
         start = 0
         output = []
         column_names = []
-        for meta in self.fit_meta:
-            dimensions = meta['output_dimensions']
-            columns_data = data[:, start:start + dimensions]
+        for col_meta in self.fit_meta:
+            print(col_meta['name'])
+            dimensions = col_meta['output_dimensions']
+            col_data = data[:, start:start + dimensions]
 
-            if 'model' in meta:
+            if 'model' in col_meta:
                 sigma = sigmas[start] if sigmas else None
-                inverted = self._inverse_transform_continuous(meta, columns_data, sigma)
+                inverted = self._inverse_transform_continuous(col_meta, col_data, sigma)
             else:
-                inverted = self._inverse_transform_discrete(meta, columns_data)
-
+                inverted = self._inverse_transform_discrete(col_meta, col_data)
+            print(inverted[:10])
             output.append(inverted)
-            column_names.append(meta['name'])
+            column_names.append(col_meta['name'])
             start += dimensions
 
         output = np.column_stack(output)
