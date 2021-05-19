@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 from sklearn.mixture import BayesianGaussianMixture
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.utils._testing import ignore_warnings
+from sklearn.exceptions import ConvergenceWarning
+
 
 from ctgan.constants import *
 
@@ -30,7 +32,7 @@ class DataTransformer(object):
         self.dtypes = None
         self.fit_meta = None
 
-    # @ignore_warnings(category=ConvergenceWarning)
+    @ignore_warnings(category=ConvergenceWarning)
     def _fit_continuous(self, col_name, data):
         gm = BayesianGaussianMixture(
             self.n_clusters,
@@ -202,7 +204,7 @@ class DataTransformer(object):
                 inverted = self._inverse_transform_continuous(col_meta, col_data, sigma)
             else:
                 inverted = self._inverse_transform_discrete(col_meta, col_data)
-            print(col_name, inverted.astype(self.dtypes[col_name])[:10])
+
             output.append(inverted.astype(self.dtypes[col_name]))
             column_names.append(col_name)
             start += dimensions
