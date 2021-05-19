@@ -50,10 +50,14 @@ class DataTransformer(object):
             'output_dimensions': 1 + num_components,
         }
 
-    def _fit_discrete(self, col_name, data):
-        ohe = OneHotEncoder(sparse=False)
+    def _fit_discrete(self, col_name, data, categories=None):
+        if categories is not None:
+            ohe = OneHotEncoder(categories=categories, sparse=False)
+        else:
+            ohe = OneHotEncoder(sparse=False)
         ohe.fit(data)
         categories = len(ohe.categories_[0])
+        print(col_name, ohe.categories_)
 
         return {
             'name': col_name,
@@ -172,7 +176,7 @@ class DataTransformer(object):
     def _inverse_transform_discrete(self, meta, oh_data):
         encoder = meta['encoder']
         data = encoder.inverse_transform(oh_data)
-        print(data[0])
+        print(meta['name'], data[0])
 
         return data
 
@@ -188,7 +192,6 @@ class DataTransformer(object):
                 sigma = sigmas[start] if sigmas else None
                 inverted = self._inverse_transform_continuous(meta, columns_data, sigma)
             else:
-                print(meta['name'])
                 inverted = self._inverse_transform_discrete(meta, columns_data)
 
             output.append(inverted)
