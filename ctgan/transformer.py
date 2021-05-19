@@ -93,6 +93,7 @@ class DataTransformer(object):
                 self.dtypes[col_name] = np.int
 
             elif col_type == CATEGORICAL or col_type == ORDINAL:
+                print('Data in', col_name, column_data[:5])
                 col_meta = self._fit_discrete(col_name, column_data)
                 self.dtypes[col_name] = np.object
 
