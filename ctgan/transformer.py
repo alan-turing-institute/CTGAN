@@ -50,20 +50,13 @@ class DataTransformer(object):
             'output_dimensions': 1 + num_components,
         }
 
-    def _fit_discrete(self, col_name, data, categories=None):
-        if categories is not None:
-            ohe = OneHotEncoder(categories=categories, sparse=False)
-        else:
-            ohe = OneHotEncoder(sparse=False)
-        ohe.fit(data)
-        categories = len(ohe.categories_[0])
-        print(col_name, ohe.categories_)
+    def _fit_discrete(self, col_name, categories):
 
         return {
             'name': col_name,
-            'encoder': ohe,
-            'output_info': [(categories, 'softmax')],
-            'output_dimensions': categories
+            'categories': categories,
+            'output_info': [(len(categories), 'softmax')],
+            'output_dimensions': len(categories)
         }
 
     def fit(self, data):
@@ -93,8 +86,7 @@ class DataTransformer(object):
                 self.dtypes[col_name] = np.int
 
             elif col_type == CATEGORICAL or col_type == ORDINAL:
-                print('Data in', col_name, column_data[:5])
-                col_meta = self._fit_discrete(col_name, column_data)
+                col_meta = self._fit_discrete(col_name, col_info['i2s'])
                 self.dtypes[col_name] = np.object
 
             else:
@@ -133,9 +125,18 @@ class DataTransformer(object):
         probs_onehot[np.arange(len(probs)), opt_sel] = 1
         return [features, probs_onehot]
 
-    def _transform_discrete(self, column_meta, data):
-        encoder = column_meta['encoder']
-        return encoder.transform(data)
+    def _transform_discrete(self, column_meta, col_data):
+        categories = column_meta['categories']
+        data_ohe = self._one_hot(col_data, categories)
+
+        return data_ohe
+
+    def _one_hot(self, col_data, categories):
+        col_data_onehot = np.zeros((len(col_data), len(categories)))
+        cidx = [categories.index(c) for c in col_data]
+        col_data_onehot[np.arange(len(col_data)), cidx] = 1
+
+        return col_data_onehot
 
     def transform(self, data):
         if not isinstance(data, pd.DataFrame):
@@ -175,11 +176,16 @@ class DataTransformer(object):
         return column
 
     def _inverse_transform_discrete(self, meta, oh_data):
-        encoder = meta['encoder']
-        data = encoder.inverse_transform(oh_data)
-        print(meta['name'], data[0])
+        categories = meta['categories']
+        data = self._reverse_one_hot(oh_data, categories)
 
-        return data
+        return data.reshape(-1, 1)
+
+    def _reverse_one_hot(self, col_encoded, categories):
+        cat_idx = np.argmax(col_encoded, axis=1)
+        col_data = np.array([categories[i] for i in cat_idx])
+
+        return col_data
 
     def inverse_transform(self, data, sigmas):
         start = 0
