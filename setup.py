@@ -14,9 +14,9 @@ with open('HISTORY.md', encoding='utf-8') as history_file:
 install_requires = [
     'torch<2,>=1.0',
     'torchvision<1,>=0.4.2',
-    'scikit-learn>=0.21,<1',
+    'scikit-learn<2,>=0.21',
     'numpy<2,>=1.17.4',
-    'pandas<0.26,>=0.24',
+    'pandas<2,>=0.24',
 ]
 
 setup_requires = [
