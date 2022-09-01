@@ -12,7 +12,7 @@ from ctgan.transformer import DataTransformer
 import logging
 from logging.config import fileConfig
 dirname = path.dirname(__file__)
-logconfig = path.join(dirname, '../logging_config.ini')
+logconfig = path.join(dirname, './logging_config.ini')
 fileConfig(logconfig)
 logger = logging.getLogger(__name__)
 
