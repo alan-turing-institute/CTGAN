@@ -12,7 +12,7 @@ with open('HISTORY.md', encoding='utf-8') as history_file:
     history = history_file.read()
 
 install_requires = [
-    'torch<1.13,>=1.0',
+    'torch<1.13,>=1.0', # torch 1.13.0 comes with some nvidia deps that don't play well with poetry.
     'torchvision<1,>=0.4.2',
     'scikit-learn<2,>=0.21',
     'numpy<2,>=1.17.4',
